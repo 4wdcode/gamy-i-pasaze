@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gamy i pasaże</title>
 <style>
   @font-face {
@@ -18,18 +18,19 @@
     font-size:16px;
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { min-height:100%; overflow-x:hidden; }
+  html { min-height:100%; overflow-x:hidden; }
+  body { min-height:100%; }
   body {
     margin:0; background:var(--paper); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     display:flex; justify-content:center;
-    overscroll-behavior-y:none;
   }
   .app {
     width:100%; max-width:460px; min-height:100vh;
     min-height:100dvh;
     display:flex; flex-direction:column;
-    padding:calc(10px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+    padding:calc(10px + env(safe-area-inset-top)) 14px calc(32px + env(safe-area-inset-bottom));
+    touch-action:pan-y;
   }
 
   /* ---------- header ---------- */
@@ -74,7 +75,8 @@
   .tabs {
     display:flex; gap:4px; margin-top:14px; background:var(--card);
     border:1px solid var(--line); border-radius:999px; padding:4px;
-    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    touch-action:pan-x;
   }
   .tabs::-webkit-scrollbar { display:none; }
   .tab {
@@ -103,11 +105,11 @@
     position:relative;
   }
   .card::after {
-    content:""; position:absolute; right:-70px; bottom:-70px; width:230px; height:230px;
+    content:""; position:absolute; right:-12px; bottom:-12px; width:230px; height:230px;
     border-radius:50%; border:1.5px solid var(--line); opacity:.5; pointer-events:none;
   }
   .card::before {
-    content:""; position:absolute; right:-38px; bottom:-38px; width:150px; height:150px;
+    content:""; position:absolute; right:-6px; bottom:-6px; width:150px; height:150px;
     border-radius:50%; border:1.5px solid var(--line); opacity:.5; pointer-events:none;
   }
   .eyebrow {
@@ -162,6 +164,7 @@
     color:var(--ink); background:var(--paper);
   }
   .slot.filled { border-style:solid; border-color:var(--good); background:var(--good-soft); }
+  .slot.revealed { border-style:solid; border-color:var(--bad); background:var(--bad-soft); color:var(--bad); }
 
   .tilegrid {
     display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:16px;
@@ -174,6 +177,7 @@
   .tile:active { background:var(--paper); }
   .tile.good { background:var(--good); border-color:var(--good); color:#fff; }
   .tile.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+  .tile:disabled, .chordtile:disabled { opacity:.4; }
 
   .rowbtns { display:flex; gap:8px; margin-top:12px; }
   .btnline {
@@ -207,6 +211,7 @@
     font-family:Georgia,serif; font-size:19px; font-weight:700; color:var(--ink-soft);
   }
   .cslot.filled { border-style:solid; border-color:var(--gold); background:var(--gold-soft); color:var(--ink); }
+  .cslot.revealed { border-style:solid; border-color:var(--bad); background:var(--bad-soft); color:var(--bad); }
   .chordtiles { display:flex; flex-direction:column; gap:9px; margin-top:16px; }
   .chordtile {
     padding:15px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--card);
@@ -362,6 +367,7 @@ const RECENT_WINDOW = 4;
 const WEIGHT_NEW = 3;
 const WEIGHT_SEEN = 1;
 const RECENT_PENALTY = 0.25;
+const MAX_MISTAKES = 2; // ile błędów wolno zrobić w jednej rundzie, zanim przepadnie
 const MODES_VERSION = 2; // podbij przy każdym dodaniu nowych trybów do MODES
 
 const card = document.getElementById("card");
@@ -612,6 +618,16 @@ function completeRound() {
   clearTimeout(state.autoAdvanceTimer);
   state.autoAdvanceTimer = setTimeout(startRound, 950);
 }
+/* Zbyt wiele błędów: bez punktu, bez opanowania — tylko pokazujemy poprawną
+   odpowiedź i lecimy dalej. Blokuje zdobywanie punktów samym zgadywaniem. */
+function failRound(revealFn) {
+  state.streak = 0;
+  renderStats(); renderDial(); saveStats();
+  showToast("Zbyt wiele pomyłek — oto poprawna odpowiedź", "bad");
+  if (revealFn) revealFn();
+  clearTimeout(state.autoAdvanceTimer);
+  state.autoAdvanceTimer = setTimeout(startRound, 3000);
+}
 
 /* ---------------- budowanie z pojedynczych dźwięków: gama i tonika ---------------- */
 function renderNoteBuild(targetNotes, instruction) {
@@ -638,6 +654,15 @@ function undoNote() {
   slots[state.step].classList.remove("filled");
   slots[state.step].textContent = "";
 }
+function revealNoteAnswer() {
+  const target = state._target;
+  const slots = card.querySelectorAll(".slot");
+  for (let i = state.step; i < target.length; i++) {
+    slots[i].textContent = target[i];
+    slots[i].classList.add("revealed");
+  }
+  card.querySelectorAll(".tile").forEach(b => b.disabled = true);
+}
 function onNoteTap(btn) {
   const target = state._target;
   const expected = target[state.step];
@@ -653,8 +678,13 @@ function onNoteTap(btn) {
   } else {
     state.mistakes++;
     btn.classList.add("bad","shake");
-    showToast("Spróbuj jeszcze raz", "bad");
     setTimeout(()=>btn.classList.remove("bad","shake"), 320);
+    if (state.mistakes > MAX_MISTAKES) {
+      revealNoteAnswer();
+      failRound();
+    } else {
+      showToast("Spróbuj jeszcze raz", "bad");
+    }
   }
 }
 function renderGama() {
@@ -673,6 +703,7 @@ function neighbor(k, dir) {
 function renderSasiedzi() {
   const k = state.key;
   state.sub = "S"; state.subDone = {S:false, D:false};
+  state._sasiedziCorrect = { S: neighbor(k,-1).id, D: neighbor(k,1).id };
   card.innerHTML = `
     <div class="eyebrow"><span>lewy sąsiad = S · prawy = D</span><span class="keychip">${k.label}</span></div>
     <div class="keyrow"><div class="keyname">${k.name}</div>${k.enh ? `<div class="altname">brzmi jak ${k.enh}</div>` : ""}</div>
@@ -688,6 +719,19 @@ function renderSasiedzi() {
   `;
   buildOptions("optS", neighbor(k,-1), "S");
   buildOptions("optD", neighbor(k, 1), "D");
+}
+function revealSasiedziAnswer() {
+  const correct = state._sasiedziCorrect;
+  document.getElementById("subD").style.opacity = 1;
+  document.getElementById("subD").style.pointerEvents = "none";
+  ["optS","optD"].forEach(containerId=>{
+    const which = containerId === "optS" ? "S" : "D";
+    document.getElementById(containerId).querySelectorAll(".opt").forEach(o=>{
+      o.disabled = true;
+      if (parseInt(o.dataset.id,10) === correct[which]) o.classList.add("good");
+      else o.classList.add("dim");
+    });
+  });
 }
 function buildOptions(containerId, correctKey, which) {
   const k = state.key;
@@ -716,8 +760,13 @@ function onSasiedziTap(btn, correctId, which) {
     state.mistakes++;
     btn.classList.add("bad","shake");
     btn.disabled = true;
-    showToast("Nie ten sąsiad — spróbuj kolejny", "bad");
-    setTimeout(()=>btn.classList.remove("shake"), 320);
+    if (state.mistakes > MAX_MISTAKES) {
+      revealSasiedziAnswer();
+      failRound();
+    } else {
+      showToast("Nie ten sąsiad — spróbuj kolejny", "bad");
+      setTimeout(()=>btn.classList.remove("shake"), 320);
+    }
   }
 }
 
@@ -739,6 +788,16 @@ function renderPasaz() {
     btn.addEventListener("click", ()=>onPasazTap(btn));
   });
 }
+function revealPasazAnswer() {
+  const k = state.key;
+  const chords = {T:k.T, S:k.S, D:k.D};
+  const slots = card.querySelectorAll(".cslot");
+  for (let i = state._pasazStep; i < state._pasazSeq.length; i++) {
+    slots[i].textContent = chords[state._pasazSeq[i]];
+    slots[i].classList.add("revealed");
+  }
+  card.querySelectorAll(".chordtile").forEach(b => b.disabled = true);
+}
 function onPasazTap(btn) {
   const role = btn.dataset.role;
   const expected = state._pasazSeq[state._pasazStep];
@@ -753,8 +812,13 @@ function onPasazTap(btn) {
   } else {
     state.mistakes++;
     btn.classList.add("bad","shake");
-    showToast("Zła kolejność — to nie ten akord", "bad");
     setTimeout(()=>btn.classList.remove("bad","shake"), 320);
+    if (state.mistakes > MAX_MISTAKES) {
+      revealPasazAnswer();
+      failRound();
+    } else {
+      showToast("Zła kolejność — to nie ten akord", "bad");
+    }
   }
 }
 
