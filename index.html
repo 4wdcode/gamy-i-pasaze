@@ -18,7 +18,7 @@
     font-size:16px;
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { height:100%; }
+  html,body { min-height:100%; overflow-x:hidden; }
   body {
     margin:0; background:var(--paper); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
@@ -96,11 +96,11 @@
   .tabsFade.hide { opacity:0; }
 
   /* ---------- main card ---------- */
-  main { flex:1; display:flex; flex-direction:column; margin-top:14px; min-height:0; }
+  main { flex:1; display:flex; flex-direction:column; margin-top:14px; }
   .card {
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:20px 18px 18px; flex:1; display:flex; flex-direction:column;
-    position:relative; overflow:hidden;
+    position:relative;
   }
   .card::after {
     content:""; position:absolute; right:-70px; bottom:-70px; width:230px; height:230px;
@@ -164,7 +164,7 @@
   .slot.filled { border-style:solid; border-color:var(--good); background:var(--good-soft); }
 
   .tilegrid {
-    display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:26px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:16px;
   }
   .tile {
     padding:13px 0; border-radius:11px; border:1px solid var(--line);
@@ -207,7 +207,7 @@
     font-family:Georgia,serif; font-size:19px; font-weight:700; color:var(--ink-soft);
   }
   .cslot.filled { border-style:solid; border-color:var(--gold); background:var(--gold-soft); color:var(--ink); }
-  .chordtiles { display:flex; flex-direction:column; gap:9px; margin-top:28px; }
+  .chordtiles { display:flex; flex-direction:column; gap:9px; margin-top:16px; }
   .chordtile {
     padding:15px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--card);
     font-family:ui-monospace,Consolas,monospace; font-size:16px; font-weight:600; color:var(--ink);
@@ -228,11 +228,11 @@
 
   .skiprow { display:flex; justify-content:space-between; gap:8px; margin-top:14px; }
   .skipbtn {
-    background:transparent; border:1px solid var(--line); border-radius:999px;
-    padding:6px 12px; font-size:11.5px; font-weight:600; color:var(--muted);
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:7px 13px; font-size:11.5px; font-weight:700; color:var(--ink-soft);
     font-family:inherit; white-space:nowrap;
   }
-  .skipbtn:active { background:var(--card); }
+  .skipbtn:active { background:var(--paper); }
   .skipbtn.on { border-color:var(--gold); color:#8A6A3B; background:var(--gold-soft); }
 
   .settingsPanel {
