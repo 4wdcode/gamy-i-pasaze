@@ -75,37 +75,3 @@ rozgrzewka na początku zajęć albo jako samodzielne ćwiczenie w domu.
 Warto zacząć od trybu *Sąsiedzi* (samo koło, bez znajomości nut), potem
 *Gama*, a na końcu *Pasaż*, który wymaga już pewności w obu poprzednich.
 
----
-
-## 🚀 Jak to wystawić na GitHub Pages
-
-1. Załóż nowe repozytorium na [github.com](https://github.com) (może być
-   publiczne, za darmo).
-2. Wgraj plik **`index.html`** z tego folderu do głównego katalogu
-   repozytorium — nazwa musi być dokładnie taka.
-3. Wejdź w zakładkę **Settings → Pages**, jako źródło wybierz gałąź `main`
-   i katalog `/ (root)`, zapisz.
-4. Po minucie lub dwóch strona będzie działać pod adresem
-   `https://twoj-login.github.io/nazwa-repo/`.
-
-Żadnego serwera, bazy danych ani konfiguracji — to jeden samodzielny plik
-HTML.
-
----
-
-## ❓ Częste pytania
-
-**Czemu Cis-dur i Des-dur to „ta sama kropka"?**
-Bo to dokładnie ten sam dźwięk na klawiaturze — różni się tylko zapis
-nutowy (same krzyżyki vs same bemole). To akurat dobra okazja, żeby to
-zauważyć: dwie różne nazwy, jedno brzmienie.
-
-**Da się zresetować wynik?**
-W samym interfejsie jeszcze nie ma takiego przycisku — trzeba wyczyścić dane
-strony w przeglądarce (zwykle: Ustawienia przeglądarki → Prywatność → Dane
-witryn → znajdź adres strony → usuń). Jeśli przyda się przycisk
-„wyczyść wynik" bezpośrednio w grze, łatwo go dodać.
-
-**Czy działa offline, np. w samolocie?**
-Tak, po pierwszym wczytaniu strona nie potrzebuje internetu — cały kod i
-dane tonacji są w jednym pliku.
