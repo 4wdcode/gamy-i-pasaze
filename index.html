@@ -62,19 +62,38 @@
   }
   @media (prefers-reduced-motion:reduce) { .bump { animation:none; } }
 
+  .dotpop { transform-box:fill-box; transform-origin:center; animation:dotpop .55s ease; }
+  @keyframes dotpop {
+    0% { transform:scale(1); }
+    40% { transform:scale(2.3); }
+    100% { transform:scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce) { .dotpop { animation:none; } }
+
   /* ---------- tabs ---------- */
   .tabs {
-    display:flex; gap:6px; margin-top:14px; background:var(--card);
+    display:flex; gap:4px; margin-top:14px; background:var(--card);
     border:1px solid var(--line); border-radius:999px; padding:4px;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
   }
+  .tabs::-webkit-scrollbar { display:none; }
   .tab {
-    flex:1; border:0; background:transparent; padding:9px 4px; border-radius:999px;
-    font-size:12.5px; font-weight:600; color:var(--ink-soft); font-family:inherit;
-    display:flex; flex-direction:column; align-items:center; gap:1px;
+    flex:0 0 auto; min-width:72px; border:0; background:transparent; padding:8px 11px; border-radius:999px;
+    font-size:11.5px; font-weight:600; color:var(--ink-soft); font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:1px; white-space:nowrap;
   }
-  .tab small { font-weight:400; font-size:9.5px; color:var(--muted); }
+  .tab small { font-weight:400; font-size:8.8px; color:var(--muted); }
   .tab.active { background:var(--ink); color:#fff; }
   .tab.active small { color:#C9D2DA; }
+
+  .tabsWrap { position:relative; }
+  .tabsWrap .tabs { margin-top:0; }
+  .tabsFade {
+    position:absolute; top:4px; bottom:4px; right:4px; width:26px;
+    background:linear-gradient(to right, transparent, var(--card));
+    border-radius:0 999px 999px 0; pointer-events:none; transition:opacity .15s;
+  }
+  .tabsFade.hide { opacity:0; }
 
   /* ---------- main card ---------- */
   main { flex:1; display:flex; flex-direction:column; margin-top:14px; min-height:0; }
@@ -207,13 +226,46 @@
   }
   @media (prefers-reduced-motion:reduce) { .shake { animation:none; } }
 
-  .skiprow { display:flex; justify-content:flex-end; margin-top:10px; }
+  .skiprow { display:flex; justify-content:space-between; gap:8px; margin-top:10px; }
   .skipbtn {
     background:transparent; border:1px solid var(--line); border-radius:999px;
     padding:6px 12px; font-size:11.5px; font-weight:600; color:var(--muted);
-    font-family:inherit;
+    font-family:inherit; white-space:nowrap;
   }
   .skipbtn:active { background:var(--card); }
+  .skipbtn.on { border-color:var(--gold); color:#8A6A3B; background:var(--gold-soft); }
+
+  .settingsPanel {
+    margin-top:8px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:12px 14px;
+  }
+  .settingsPanel.hidden { display:none; }
+  .settingsTitle { font-size:11.5px; font-weight:700; color:var(--ink); }
+  .settingsHint { font-size:10.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+  .settingsRow {
+    display:flex; align-items:center; gap:9px; padding:8px 0; font-size:13px;
+    color:var(--ink); border-top:1px solid #EEE9DF;
+  }
+  .settingsRow:first-of-type { border-top:none; }
+  .settingsRow input { width:17px; height:17px; accent-color:var(--gold); flex:0 0 auto; }
+  .settingsRow .rowtext b { font-weight:700; }
+  .settingsRow .rowtext small { display:block; color:var(--muted); font-size:10.5px; margin-top:1px; }
+
+  .settingsDivider { height:1px; background:#EEE9DF; margin:12px 0 10px; }
+  .resetbtn {
+    width:100%; padding:9px 0; border-radius:11px; border:1px solid var(--bad);
+    background:transparent; color:var(--bad); font-size:12px; font-weight:600;
+    font-family:inherit;
+  }
+  .resetbtn:active { background:var(--bad-soft); }
+  .resetbtn.confirm { background:var(--bad); color:#fff; }
+
+  .aboutText { font-size:11.5px; color:var(--ink-soft); line-height:1.5; margin:6px 0 8px; }
+  .aboutLink {
+    display:inline-block; font-size:12px; font-weight:600; color:var(--ink);
+    text-decoration:none; border-bottom:1.5px solid var(--gold); padding-bottom:1px;
+  }
+  .aboutLink:active { color:var(--gold); }
 
   footer { text-align:center; font-size:10px; color:var(--muted); margin-top:10px; }
 </style>
@@ -234,13 +286,33 @@
     <div class="stat" id="statBestCard"><div class="statnum" id="statBest">0</div><div class="statlabel">rekord</div></div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-mode="gama">Gama<small>zbuduj</small></button>
-    <button class="tab" data-mode="sasiedzi">Sąsiedzi<small>S i D</small></button>
-    <button class="tab" data-mode="pasaz">Pasaż<small>T–S–D–T</small></button>
+  <div class="tabsWrap">
+    <div class="tabs" id="tabs"></div>
+    <div class="tabsFade hide" id="tabsFade"></div>
   </div>
 
-  <div class="skiprow"><button class="skipbtn" id="skipBtn">pomiń tę tonację →</button></div>
+  <div class="skiprow">
+    <button class="skipbtn" id="settingsBtn">⚙ ćwiczenia</button>
+    <button class="skipbtn" id="skipBtn">pomiń tę tonację →</button>
+  </div>
+
+  <div class="settingsPanel hidden" id="settingsPanel">
+    <div class="settingsTitle">Widoczne ćwiczenia</div>
+    <div class="settingsHint">Odznacz to, czego jeszcze nie ćwiczycie — zniknie z zakładek.</div>
+    <div id="settingsList"></div>
+    <div class="settingsDivider"></div>
+    <button class="resetbtn" id="resetBtn">🗑 Wyczyść wynik</button>
+    <div class="settingsDivider"></div>
+    <div class="aboutBox">
+      <div class="settingsTitle">ℹ️ O grze</div>
+      <p class="aboutText">Gra do nauki koła kwintowego: gam durowych, akordów
+      T–S–D i pasażu T→S→D→T. Sześć trybów włączanych osobno powyżej — dopasuj
+      do poziomu dziecka. Wynik zapisuje się wyłącznie lokalnie w tej
+      przeglądarce, nic nie jest wysyłane nigdzie indziej.</p>
+      <a class="aboutLink" href="https://github.com/4wdcode/gamy-i-pasaze"
+         target="_blank" rel="noopener noreferrer">📖 Pełny opis i częste pytania (GitHub) →</a>
+    </div>
+  </div>
 
   <main><div class="card" id="card"></div></main>
 
@@ -252,18 +324,45 @@ const KEYS = [{"id": 0, "name": "C-dur", "enh": null, "sig": "none", "label": "b
 const SHARP_TILES = ["c","cis","d","dis","e","eis","f","fis","g","gis","a","ais","h","his"];
 const FLAT_TILES  = ["c","des","d","es","e","f","ges","g","as","a","b","h"];
 
+const MODES = [
+  {id:"gama",         label:"Gama",         sub:"zbuduj",   desc:"budowanie gamy w górę"},
+  {id:"tonika",       label:"Tonika",       sub:"zbuduj T", desc:"budowanie akordu I (toniki)"},
+  {id:"subdominanta", label:"Subdominanta", sub:"zbuduj S", desc:"budowanie akordu IV (subdominanty)"},
+  {id:"dominanta",    label:"Dominanta",    sub:"zbuduj D", desc:"budowanie akordu V (dominanty)"},
+  {id:"sasiedzi",     label:"Sąsiedzi",     sub:"S i D",    desc:"sąsiedzi na kole — S i D"},
+  {id:"pasaz",        label:"Pasaż",        sub:"T–S–D–T",  desc:"kolejność akordów T→S→D→T"},
+];
+function emptyModeMap() {
+  const o = {};
+  MODES.forEach(m => o[m.id] = []);
+  return o;
+}
+const CHORD_FIELD = {tonika:"T", subdominanta:"S", dominanta:"D"};
+const CHORD_LABEL = {tonika:"tonikę (I stopień)", subdominanta:"subdominantę (IV stopień)", dominanta:"dominantę (V stopień)"};
+
 const state = {
   mode:"gama",
+  visible:MODES.map(m=>m.id),
   lastKeyId:null,
   key:null,
   step:0,
   mistakes:0,
   score:0, streak:0, best:0,
-  mastered:{gama:[], sasiedzi:[], pasaz:[]},
+  mastered:emptyModeMap(),
+  // doneNames: po NAZWIE (nie pozycji) — Cis-dur i Des-dur liczone osobno,
+  // mimo że dzielą jedną kropkę na kole w "mastered".
+  doneNames:emptyModeMap(),
+  recentNames:emptyModeMap(), // tylko na sesję, nie zapisujemy
   sub:"S",           // sasiedzi: which sub-question
   subDone:{S:false,D:false},
   pasazAnswered:0,
+  autoAdvanceTimer:null,
 };
+const RECENT_WINDOW = 4;
+const WEIGHT_NEW = 3;
+const WEIGHT_SEEN = 1;
+const RECENT_PENALTY = 0.25;
+const MODES_VERSION = 2; // podbij przy każdym dodaniu nowych trybów do MODES
 
 const card = document.getElementById("card");
 const dialEl = document.getElementById("dial");
@@ -276,25 +375,57 @@ async function loadStats() {
       const v = JSON.parse(raw);
       state.best = v.best || 0;
       state.score = v.score || 0;
-      state.mastered = v.mastered || {gama:[], sasiedzi:[], pasaz:[]};
+      state.mastered = Object.assign(emptyModeMap(), v.mastered || {});
+      state.doneNames = Object.assign(emptyModeMap(), v.doneNames || {});
+      if (Array.isArray(v.visible) && v.visible.length) {
+        state.visible = v.visible;
+        // migracja: nowo dodane tryby (np. Subdominanta/Dominanta) dopisujemy
+        // automatycznie do widocznych przy pierwszym wczytaniu po aktualizacji,
+        // żeby nie zniknęły komuś, kto wcześniej nic nie odznaczał ręcznie.
+        const savedVersion = v.modesVersion || 1;
+        if (savedVersion < MODES_VERSION) {
+          MODES.forEach(m => { if (!state.visible.includes(m.id)) state.visible.push(m.id); });
+        }
+      }
     }
   } catch (e) { /* brak zapisanych danych — zaczynamy od zera */ }
-  renderStats(); renderDial();
+  renderStats(); renderDial(); renderTabs(); renderSettingsList();
 }
 async function saveStats() {
   try {
     localStorage.setItem("gamy-pasaze-stats", JSON.stringify({
-      best:state.best, score:state.score, mastered:state.mastered
+      best:state.best, score:state.score, mastered:state.mastered,
+      doneNames:state.doneNames, visible:state.visible, modesVersion:MODES_VERSION
     }));
   } catch (e) { /* zapis się nie powiódł — gramy dalej offline */ }
 }
 
 /* ---------------- helpers ---------------- */
 function pickKey() {
-  let pool = KEYS.filter(k => k.id !== state.lastKeyId);
-  const k = pool[Math.floor(Math.random() * pool.length)];
-  state.lastKeyId = k.id;
-  return k;
+  const done = state.doneNames[state.mode] || [];
+  const recent = state.recentNames[state.mode] || [];
+
+  const weights = KEYS.map(k => {
+    if (k.id === state.lastKeyId) return 0; // nigdy dwa razy z rzędu ta sama pozycja na kole
+    let w = done.includes(k.name) ? WEIGHT_SEEN : WEIGHT_NEW;
+    if (recent.includes(k.name)) w *= RECENT_PENALTY;
+    return w;
+  });
+
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  let chosen = KEYS[KEYS.length - 1];
+  for (let i = 0; i < KEYS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) { chosen = KEYS[i]; break; }
+  }
+
+  state.lastKeyId = chosen.id;
+  recent.push(chosen.name);
+  if (recent.length > RECENT_WINDOW) recent.shift();
+  state.recentNames[state.mode] = recent;
+
+  return chosen;
 }
 function shuffle(arr) {
   const a = arr.slice();
@@ -335,22 +466,118 @@ function celebrate() {
 }
 function renderDial() {
   const cx=22, cy=22, r=17;
-  let s = `<svg width="44" height="44" viewBox="0 0 44 44">`;
+  let s = `<svg width="56" height="56" viewBox="0 0 44 44">`;
   s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${'#DED8CB'}" stroke-width="1.4"/>`;
   for (let i=0;i<12;i++) {
     const a = (-90 + i*30) * Math.PI/180;
     const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
-    const inAll = state.mastered.gama.includes(i) && state.mastered.sasiedzi.includes(i) && state.mastered.pasaz.includes(i);
-    const inSome = state.mastered.gama.includes(i) || state.mastered.sasiedzi.includes(i) || state.mastered.pasaz.includes(i);
+    const tracked = MODES.filter(m => state.visible.includes(m.id));
+    const inAll = tracked.length > 0 && tracked.every(m => state.mastered[m.id].includes(i));
+    const inSome = tracked.some(m => state.mastered[m.id].includes(i));
     let fill = "#DED8CB";
     if (inAll) fill = "#B08957";
     else if (inSome) fill = "#12212F";
     const rr = inAll ? 3.4 : 2.4;
-    s += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${rr}" fill="${fill}"/>`;
+    s += `<circle data-pos="${i}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${rr}" fill="${fill}"/>`;
   }
   s += `</svg>`;
   dialEl.innerHTML = s;
 }
+function popDot(posId) {
+  const dot = dialEl.querySelector(`circle[data-pos="${posId}"]`);
+  if (!dot) return;
+  dot.classList.remove("dotpop");
+  void dot.getBBox();
+  dot.classList.add("dotpop");
+}
+/* ---------------- taby i panel ustawień ---------------- */
+function renderTabs() {
+  const tabsEl = document.getElementById("tabs");
+  const visibleModes = MODES.filter(m => state.visible.includes(m.id));
+  if (!visibleModes.find(m => m.id === state.mode)) {
+    state.mode = visibleModes[0].id;
+  }
+  tabsEl.innerHTML = visibleModes.map(m =>
+    `<button class="tab ${m.id===state.mode?"active":""}" data-mode="${m.id}">${m.label}<small>${m.sub}</small></button>`
+  ).join("");
+  tabsEl.querySelectorAll(".tab").forEach(tab=>{
+    tab.addEventListener("click", ()=>{
+      state.mode = tab.dataset.mode;
+      renderTabs();
+      startRound();
+    });
+  });
+  updateTabsFade();
+}
+function updateTabsFade() {
+  const el = document.getElementById("tabs");
+  const fade = document.getElementById("tabsFade");
+  const canScrollMore = el.scrollWidth > el.clientWidth + 2 &&
+    (el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  fade.classList.toggle("hide", !canScrollMore);
+}
+document.getElementById("tabs").addEventListener("scroll", updateTabsFade);
+window.addEventListener("resize", updateTabsFade);
+function renderSettingsList() {
+  const el = document.getElementById("settingsList");
+  el.innerHTML = MODES.map(m => `
+    <label class="settingsRow">
+      <input type="checkbox" data-mode="${m.id}" ${state.visible.includes(m.id) ? "checked" : ""}>
+      <span class="rowtext"><b>${m.label}</b><small>${m.desc}</small></span>
+    </label>
+  `).join("");
+  el.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      const id = cb.dataset.mode;
+      if (cb.checked) {
+        if (!state.visible.includes(id)) state.visible.push(id);
+      } else {
+        if (state.visible.length <= 1) { cb.checked = true; return; } // zawsze zostaw min. jedno
+        state.visible = state.visible.filter(x => x !== id);
+      }
+      saveStats();
+      renderTabs();
+      startRound();
+    });
+  });
+}
+document.getElementById("settingsBtn").addEventListener("click", ()=>{
+  const panel = document.getElementById("settingsPanel");
+  panel.classList.toggle("hidden");
+  document.getElementById("settingsBtn").classList.toggle("on", !panel.classList.contains("hidden"));
+});
+
+/* ---------------- reset wyniku (z potwierdzeniem) ---------------- */
+let resetArmed = false;
+let resetTimer = null;
+document.getElementById("resetBtn").addEventListener("click", (e)=>{
+  const btn = e.currentTarget;
+  if (!resetArmed) {
+    resetArmed = true;
+    btn.classList.add("confirm");
+    btn.textContent = "Na pewno? Kliknij jeszcze raz";
+    resetTimer = setTimeout(()=>{
+      resetArmed = false;
+      btn.classList.remove("confirm");
+      btn.textContent = "🗑 Wyczyść wynik";
+    }, 4000);
+    return;
+  }
+  clearTimeout(resetTimer);
+  resetArmed = false;
+  state.score = 0;
+  state.streak = 0;
+  state.best = 0;
+  state.mastered = emptyModeMap();
+  state.doneNames = emptyModeMap();
+  saveStats();
+  renderStats();
+  renderDial();
+  btn.classList.remove("confirm");
+  btn.textContent = "Wyczyszczono ✓";
+  setTimeout(()=>{ btn.textContent = "🗑 Wyczyść wynik"; }, 1500);
+  startRound();
+});
 function toastEl() { return card.querySelector(".toast"); }
 function showToast(msg, kind) {
   const t = toastEl();
@@ -361,6 +588,8 @@ function showToast(msg, kind) {
 function markMastered(mode) {
   const arr = state.mastered[mode];
   if (!arr.includes(state.key.id)) arr.push(state.key.id);
+  const names = state.doneNames[mode];
+  if (!names.includes(state.key.name)) names.push(state.key.name);
 }
 function completeRound() {
   markMastered(state.mode);
@@ -374,48 +603,51 @@ function completeRound() {
   state.score++;
   const isNewRecord = state.best > prevBest && state.best >= 3;
   renderStats(); renderDial(); saveStats();
+  popDot(state.key.id);
   celebrate();
   bump("statScore");
   if (state.mistakes === 0) bump("statStreak");
   if (isNewRecord) bump("statBest");
   showToast(isNewRecord ? "✨ Nowy rekord! " + state.key.name : "Brawo! " + state.key.name + " ✓", "good");
-  setTimeout(startRound, 950);
+  clearTimeout(state.autoAdvanceTimer);
+  state.autoAdvanceTimer = setTimeout(startRound, 950);
 }
 
-/* ---------------- mode: GAMA ---------------- */
-function renderGama() {
+/* ---------------- budowanie z pojedynczych dźwięków: gama i tonika ---------------- */
+function renderNoteBuild(targetNotes, instruction) {
   const k = state.key;
   const tiles = k.sig === "flat" ? FLAT_TILES : SHARP_TILES;
+  state._target = targetNotes;
   card.innerHTML = `
-    <div class="eyebrow"><span>zbuduj gamę w górę</span><span class="keychip">${k.label}</span></div>
+    <div class="eyebrow"><span>${instruction}</span><span class="keychip">${k.label}</span></div>
     <div class="keyrow"><div class="keyname">${k.name}</div>${k.enh ? `<div class="altname">brzmi jak ${k.enh}</div>` : ""}</div>
     <div class="toast hidden"></div>
-    <div class="slots">${k.scale.map(()=>`<div class="slot"></div>`).join("")}</div>
+    <div class="slots">${targetNotes.map(()=>`<div class="slot"></div>`).join("")}</div>
     <div class="rowbtns"><button class="btnline" id="undo">↺ cofnij</button></div>
     <div class="tilegrid">${tiles.map(n=>`<button class="tile" data-n="${n}">${n}</button>`).join("")}</div>
   `;
   card.querySelectorAll(".tile").forEach(btn=>{
-    btn.addEventListener("click", ()=>onGamaTap(btn));
+    btn.addEventListener("click", ()=>onNoteTap(btn));
   });
-  card.querySelector("#undo").addEventListener("click", undoGama);
+  card.querySelector("#undo").addEventListener("click", undoNote);
 }
-function undoGama() {
+function undoNote() {
   if (state.step === 0) return;
   state.step--;
   const slots = card.querySelectorAll(".slot");
   slots[state.step].classList.remove("filled");
   slots[state.step].textContent = "";
 }
-function onGamaTap(btn) {
-  const k = state.key;
-  const expected = k.scale[state.step];
+function onNoteTap(btn) {
+  const target = state._target;
+  const expected = target[state.step];
   const val = btn.dataset.n;
   if (val === expected) {
     const slots = card.querySelectorAll(".slot");
     slots[state.step].textContent = val;
     slots[state.step].classList.add("filled");
     state.step++;
-    if (state.step === k.scale.length) {
+    if (state.step === target.length) {
       completeRound();
     }
   } else {
@@ -424,6 +656,13 @@ function onGamaTap(btn) {
     showToast("Spróbuj jeszcze raz", "bad");
     setTimeout(()=>btn.classList.remove("bad","shake"), 320);
   }
+}
+function renderGama() {
+  renderNoteBuild(state.key.scale, "zbuduj gamę w górę");
+}
+function renderChordMode(mode) {
+  const field = CHORD_FIELD[mode];
+  renderNoteBuild(state.key[field].split("–"), "zbuduj " + CHORD_LABEL[mode]);
 }
 
 /* ---------------- mode: SĄSIEDZI ---------------- */
@@ -521,22 +760,16 @@ function onPasazTap(btn) {
 
 /* ---------------- round / mode control ---------------- */
 function startRound() {
+  clearTimeout(state.autoAdvanceTimer);
   state.key = pickKey();
   state.step = 0;
   state.mistakes = 0;
   if (state.mode === "gama") renderGama();
+  else if (CHORD_FIELD[state.mode]) renderChordMode(state.mode);
   else if (state.mode === "sasiedzi") renderSasiedzi();
   else renderPasaz();
 }
 document.getElementById("skipBtn").addEventListener("click", startRound);
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    state.mode = tab.dataset.mode;
-    startRound();
-  });
-});
 
 loadStats().then(startRound);
 </script>
