@@ -126,11 +126,6 @@ który wymaga już pewności we wszystkich poprzednich.
 
 ## ❓ Częste pytania
 
-**Czemu Cis-dur i Des-dur to „ta sama kropka"?**
-Bo to dokładnie ten sam dźwięk na klawiaturze — różni się tylko zapis
-nutowy (same krzyżyki vs same bemole). To akurat dobra okazja, żeby to
-zauważyć: dwie różne nazwy, jedno brzmienie.
-
 **Da się zresetować wynik?**
 Tak — w panelu „⚙ ćwiczenia" jest przycisk „🗑 Wyczyść wynik". Pierwsze
 kliknięcie tylko pyta o potwierdzenie, drugie faktycznie zeruje wynik,
