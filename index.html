@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Gamy i pasaże</title>
+<style>
+  @font-face {
+    font-family: sys;
+  }
+  :root {
+    --ink:#12212F; --ink-soft:#4A5560; --muted:#8B857B;
+    --paper:#F6F3EC; --card:#FFFFFF; --line:#DED8CB;
+    --gold:#B08957; --gold-soft:#EDDFC7;
+    --good:#3F7A57; --good-soft:#E1EFE5;
+    --bad:#B23A2E; --bad-soft:#F7E3E0;
+    --radius:16px;
+    font-size:16px;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    display:flex; justify-content:center;
+    overscroll-behavior-y:none;
+  }
+  .app {
+    width:100%; max-width:460px; min-height:100vh;
+    min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding:calc(10px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- header ---------- */
+  header { display:flex; align-items:center; gap:10px; }
+  header .dial { flex:0 0 auto; }
+  header .titles { flex:1; min-width:0; }
+  header h1 {
+    font-family:Georgia,"Times New Roman",serif; font-size:17px; margin:0; letter-spacing:-.01em;
+  }
+
+  .scoreboard { display:flex; gap:7px; margin-top:12px; }
+  .stat {
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:13px;
+    padding:8px 4px 7px; text-align:center;
+  }
+  .statnum {
+    font-family:Georgia,"Times New Roman",serif; font-size:22px; font-weight:700;
+    color:var(--ink); line-height:1.1;
+  }
+  .statlabel {
+    font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:2px;
+  }
+  .stat.hot { border-color:var(--gold); background:var(--gold-soft); }
+  .stat.hot .statlabel { color:#8A6A3B; }
+  .bump { animation:bump .45s ease; }
+  @keyframes bump {
+    0% { transform:scale(1); }
+    45% { transform:scale(1.38); color:var(--gold); }
+    100% { transform:scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce) { .bump { animation:none; } }
+
+  /* ---------- tabs ---------- */
+  .tabs {
+    display:flex; gap:6px; margin-top:14px; background:var(--card);
+    border:1px solid var(--line); border-radius:999px; padding:4px;
+  }
+  .tab {
+    flex:1; border:0; background:transparent; padding:9px 4px; border-radius:999px;
+    font-size:12.5px; font-weight:600; color:var(--ink-soft); font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+  }
+  .tab small { font-weight:400; font-size:9.5px; color:var(--muted); }
+  .tab.active { background:var(--ink); color:#fff; }
+  .tab.active small { color:#C9D2DA; }
+
+  /* ---------- main card ---------- */
+  main { flex:1; display:flex; flex-direction:column; margin-top:14px; min-height:0; }
+  .card {
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px 18px 18px; flex:1; display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
+  .card::after {
+    content:""; position:absolute; right:-70px; bottom:-70px; width:230px; height:230px;
+    border-radius:50%; border:1.5px solid var(--line); opacity:.5; pointer-events:none;
+  }
+  .card::before {
+    content:""; position:absolute; right:-38px; bottom:-38px; width:150px; height:150px;
+    border-radius:50%; border:1.5px solid var(--line); opacity:.5; pointer-events:none;
+  }
+  .eyebrow {
+    font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .keyrow { display:flex; align-items:baseline; gap:8px; margin-top:5px; }
+  .keyname {
+    font-family:Georgia,"Times New Roman",serif; font-size:32px; font-weight:700;
+  }
+  .altname {
+    font-family:Georgia,"Times New Roman",serif; font-size:15px; font-style:italic;
+    color:var(--muted);
+  }
+  .keychip {
+    font-size:10.5px; color:var(--ink-soft); background:var(--paper);
+    border:1px solid var(--line); padding:2px 8px; border-radius:999px;
+  }
+
+  .toast {
+    margin-top:8px; font-size:15px; font-weight:700; min-height:20px;
+    transition:opacity .2s;
+  }
+  .toast.good { color:var(--good); animation:pop .38s ease; }
+  .toast.bad { color:var(--bad); }
+  .toast.hidden { opacity:0; }
+  @keyframes pop {
+    0% { transform:scale(.82); }
+    55% { transform:scale(1.1); }
+    100% { transform:scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce) { .toast.good { animation:none; } }
+
+  .confetti {
+    position:absolute; left:50%; top:36%; width:7px; height:7px; border-radius:2px;
+    transform:translate(-50%,-50%); pointer-events:none; z-index:5;
+    animation:burst .68s ease-out forwards;
+  }
+  @keyframes burst {
+    0%   { transform:translate(-50%,-50%) translate(0,0) rotate(0deg); opacity:1; }
+    100% { transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity:0; }
+  }
+
+  .fill { flex:1; }
+
+  /* ---------- gama mode ---------- */
+  .slots { display:flex; gap:5px; flex-wrap:wrap; margin-top:16px; }
+  .slot {
+    width:38px; height:38px; border-radius:10px; border:1.5px dashed var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:ui-monospace,Consolas,monospace; font-size:12.5px; font-weight:600;
+    color:var(--ink); background:var(--paper);
+  }
+  .slot.filled { border-style:solid; border-color:var(--good); background:var(--good-soft); }
+
+  .tilegrid {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:26px;
+  }
+  .tile {
+    padding:13px 0; border-radius:11px; border:1px solid var(--line);
+    background:var(--card); font-family:ui-monospace,Consolas,monospace; font-size:14px;
+    font-weight:600; color:var(--ink); text-align:center;
+  }
+  .tile:active { background:var(--paper); }
+  .tile.good { background:var(--good); border-color:var(--good); color:#fff; }
+  .tile.bad { background:var(--bad); border-color:var(--bad); color:#fff; }
+
+  .rowbtns { display:flex; gap:8px; margin-top:12px; }
+  .btnline {
+    flex:1; padding:9px 0; border-radius:11px; border:1px solid var(--line);
+    background:var(--card); color:var(--ink-soft); font-size:12.5px; font-weight:600;
+    font-family:inherit;
+  }
+
+  /* ---------- sasiedzi mode ---------- */
+  .subq { margin-top:18px; }
+  .subq .label {
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    margin-bottom:7px; display:flex; align-items:center; gap:6px;
+  }
+  .subq .label .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+  .options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .opt {
+    padding:13px 6px; border-radius:12px; border:1.5px solid var(--line); background:var(--card);
+    font-family:Georgia,serif; font-size:15px; font-weight:700; color:var(--ink);
+  }
+  .opt.good { background:var(--good-soft); border-color:var(--good); color:var(--good); }
+  .opt.bad { background:var(--bad-soft); border-color:var(--bad); color:var(--bad); }
+  .opt.dim { opacity:.45; }
+  .opt:disabled { pointer-events:none; }
+
+  /* ---------- pasaz mode ---------- */
+  .cadence { display:flex; gap:6px; margin-top:16px; }
+  .cslot {
+    flex:1; height:44px; border-radius:11px; border:1.5px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; background:var(--paper);
+    font-family:Georgia,serif; font-size:19px; font-weight:700; color:var(--ink-soft);
+  }
+  .cslot.filled { border-style:solid; border-color:var(--gold); background:var(--gold-soft); color:var(--ink); }
+  .chordtiles { display:flex; flex-direction:column; gap:9px; margin-top:28px; }
+  .chordtile {
+    padding:15px 10px; border-radius:12px; border:1.5px solid var(--line); background:var(--card);
+    font-family:ui-monospace,Consolas,monospace; font-size:16px; font-weight:600; color:var(--ink);
+    text-align:center; letter-spacing:.02em;
+  }
+  .chordtile.bad { background:var(--bad-soft); border-color:var(--bad); color:var(--bad); }
+  .chordtile.used { opacity:.5; }
+
+  button { cursor:pointer; touch-action:manipulation; }
+  .shake { animation:shake .32s; }
+  @keyframes shake {
+    10%,90% { transform:translateX(-2px); }
+    20%,80% { transform:translateX(3px); }
+    30%,50%,70% { transform:translateX(-5px); }
+    40%,60% { transform:translateX(5px); }
+  }
+  @media (prefers-reduced-motion:reduce) { .shake { animation:none; } }
+
+  .skiprow { display:flex; justify-content:flex-end; margin-top:10px; }
+  .skipbtn {
+    background:transparent; border:1px solid var(--line); border-radius:999px;
+    padding:6px 12px; font-size:11.5px; font-weight:600; color:var(--muted);
+    font-family:inherit;
+  }
+  .skipbtn:active { background:var(--card); }
+
+  footer { text-align:center; font-size:10px; color:var(--muted); margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="dial" id="dial"></div>
+    <div class="titles">
+      <h1>Gamy i pasaże</h1>
+    </div>
+  </header>
+
+  <div class="scoreboard">
+    <div class="stat" id="statScoreCard"><div class="statnum" id="statScore">0</div><div class="statlabel">poprawnie</div></div>
+    <div class="stat" id="statStreakCard"><div class="statnum" id="statStreak">0</div><div class="statlabel">seria</div></div>
+    <div class="stat" id="statBestCard"><div class="statnum" id="statBest">0</div><div class="statlabel">rekord</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-mode="gama">Gama<small>zbuduj</small></button>
+    <button class="tab" data-mode="sasiedzi">Sąsiedzi<small>S i D</small></button>
+    <button class="tab" data-mode="pasaz">Pasaż<small>T–S–D–T</small></button>
+  </div>
+
+  <div class="skiprow"><button class="skipbtn" id="skipBtn">pomiń tę tonację →</button></div>
+
+  <main><div class="card" id="card"></div></main>
+
+  <footer>stuknij kartę tonacji, żeby zobaczyć znaki przykluczowe</footer>
+</div>
+
+<script>
+const KEYS = [{"id": 0, "name": "C-dur", "enh": null, "sig": "none", "label": "bez znaków", "scale": ["c", "d", "e", "f", "g", "a", "h"], "S": "f–a–c", "D": "g–h–d", "T": "c–e–g"}, {"id": 1, "name": "G-dur", "enh": null, "sig": "sharp", "label": "1 krzyżyk", "scale": ["g", "a", "h", "c", "d", "e", "fis"], "S": "c–e–g", "D": "d–fis–a", "T": "g–h–d"}, {"id": 2, "name": "D-dur", "enh": null, "sig": "sharp", "label": "2 krzyżyki", "scale": ["d", "e", "fis", "g", "a", "h", "cis"], "S": "g–h–d", "D": "a–cis–e", "T": "d–fis–a"}, {"id": 3, "name": "A-dur", "enh": null, "sig": "sharp", "label": "3 krzyżyki", "scale": ["a", "h", "cis", "d", "e", "fis", "gis"], "S": "d–fis–a", "D": "e–gis–h", "T": "a–cis–e"}, {"id": 4, "name": "E-dur", "enh": null, "sig": "sharp", "label": "4 krzyżyki", "scale": ["e", "fis", "gis", "a", "h", "cis", "dis"], "S": "a–cis–e", "D": "h–dis–fis", "T": "e–gis–h"}, {"id": 5, "name": "H-dur", "enh": null, "sig": "sharp", "label": "5 krzyżyków", "scale": ["h", "cis", "dis", "e", "fis", "gis", "ais"], "S": "e–gis–h", "D": "fis–ais–cis", "T": "h–dis–fis"}, {"id": 6, "name": "Fis-dur", "enh": "Ges-dur", "sig": "sharp", "label": "6 krzyżyków", "scale": ["fis", "gis", "ais", "h", "cis", "dis", "eis"], "S": "h–dis–fis", "D": "cis–eis–gis", "T": "fis–ais–cis"}, {"id": 7, "name": "Des-dur", "enh": "Cis-dur", "sig": "flat", "label": "5 bemoli", "scale": ["des", "es", "f", "ges", "as", "b", "c"], "S": "ges–b–des", "D": "as–c–es", "T": "des–f–as"}, {"id": 7, "name": "Cis-dur", "enh": "Des-dur", "sig": "sharp", "label": "7 krzyżyków", "scale": ["cis", "dis", "eis", "fis", "gis", "ais", "his"], "S": "fis–ais–cis", "D": "gis–his–dis", "T": "cis–eis–gis"}, {"id": 8, "name": "As-dur", "enh": null, "sig": "flat", "label": "4 bemole", "scale": ["as", "b", "c", "des", "es", "f", "g"], "S": "des–f–as", "D": "es–g–b", "T": "as–c–es"}, {"id": 9, "name": "Es-dur", "enh": null, "sig": "flat", "label": "3 bemole", "scale": ["es", "f", "g", "as", "b", "c", "d"], "S": "as–c–es", "D": "b–d–f", "T": "es–g–b"}, {"id": 10, "name": "B-dur", "enh": null, "sig": "flat", "label": "2 bemole", "scale": ["b", "c", "d", "es", "f", "g", "a"], "S": "es–g–b", "D": "f–a–c", "T": "b–d–f"}, {"id": 11, "name": "F-dur", "enh": null, "sig": "flat", "label": "1 bemol", "scale": ["f", "g", "a", "b", "c", "d", "e"], "S": "b–d–f", "D": "c–e–g", "T": "f–a–c"}];
+const SHARP_TILES = ["c","cis","d","dis","e","eis","f","fis","g","gis","a","ais","h","his"];
+const FLAT_TILES  = ["c","des","d","es","e","f","ges","g","as","a","b","h"];
+
+const state = {
+  mode:"gama",
+  lastKeyId:null,
+  key:null,
+  step:0,
+  mistakes:0,
+  score:0, streak:0, best:0,
+  mastered:{gama:[], sasiedzi:[], pasaz:[]},
+  sub:"S",           // sasiedzi: which sub-question
+  subDone:{S:false,D:false},
+  pasazAnswered:0,
+};
+
+const card = document.getElementById("card");
+const dialEl = document.getElementById("dial");
+
+/* ---------------- persistence ---------------- */
+async function loadStats() {
+  try {
+    const raw = localStorage.getItem("gamy-pasaze-stats");
+    if (raw) {
+      const v = JSON.parse(raw);
+      state.best = v.best || 0;
+      state.score = v.score || 0;
+      state.mastered = v.mastered || {gama:[], sasiedzi:[], pasaz:[]};
+    }
+  } catch (e) { /* brak zapisanych danych — zaczynamy od zera */ }
+  renderStats(); renderDial();
+}
+async function saveStats() {
+  try {
+    localStorage.setItem("gamy-pasaze-stats", JSON.stringify({
+      best:state.best, score:state.score, mastered:state.mastered
+    }));
+  } catch (e) { /* zapis się nie powiódł — gramy dalej offline */ }
+}
+
+/* ---------------- helpers ---------------- */
+function pickKey() {
+  let pool = KEYS.filter(k => k.id !== state.lastKeyId);
+  const k = pool[Math.floor(Math.random() * pool.length)];
+  state.lastKeyId = k.id;
+  return k;
+}
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function renderStats() {
+  document.getElementById("statScore").textContent = state.score;
+  document.getElementById("statStreak").textContent = state.streak;
+  document.getElementById("statBest").textContent = state.best;
+  document.getElementById("statStreakCard").classList.toggle("hot", state.streak >= 3);
+}
+function bump(id) {
+  const el = document.getElementById(id);
+  el.classList.remove("bump");
+  void el.offsetWidth;
+  el.classList.add("bump");
+}
+function celebrate() {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const colors = ["#B08957", "#3F7A57", "#12212F"];
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement("div");
+    p.className = "confetti";
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 55 + Math.random() * 70;
+    p.style.setProperty("--dx", (Math.cos(angle) * dist).toFixed(1) + "px");
+    p.style.setProperty("--dy", (Math.sin(angle) * dist - 25).toFixed(1) + "px");
+    p.style.setProperty("--rot", Math.floor(Math.random() * 360) + "deg");
+    p.style.background = colors[i % colors.length];
+    if (i % 3 === 0) p.style.borderRadius = "50%";
+    card.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+function renderDial() {
+  const cx=22, cy=22, r=17;
+  let s = `<svg width="44" height="44" viewBox="0 0 44 44">`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${'#DED8CB'}" stroke-width="1.4"/>`;
+  for (let i=0;i<12;i++) {
+    const a = (-90 + i*30) * Math.PI/180;
+    const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+    const inAll = state.mastered.gama.includes(i) && state.mastered.sasiedzi.includes(i) && state.mastered.pasaz.includes(i);
+    const inSome = state.mastered.gama.includes(i) || state.mastered.sasiedzi.includes(i) || state.mastered.pasaz.includes(i);
+    let fill = "#DED8CB";
+    if (inAll) fill = "#B08957";
+    else if (inSome) fill = "#12212F";
+    const rr = inAll ? 3.4 : 2.4;
+    s += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${rr}" fill="${fill}"/>`;
+  }
+  s += `</svg>`;
+  dialEl.innerHTML = s;
+}
+function toastEl() { return card.querySelector(".toast"); }
+function showToast(msg, kind) {
+  const t = toastEl();
+  if (!t) return;
+  t.textContent = msg;
+  t.className = "toast " + (kind || "");
+}
+function markMastered(mode) {
+  const arr = state.mastered[mode];
+  if (!arr.includes(state.key.id)) arr.push(state.key.id);
+}
+function completeRound() {
+  markMastered(state.mode);
+  const prevBest = state.best;
+  if (state.mistakes === 0) {
+    state.streak++;
+    if (state.streak > state.best) state.best = state.streak;
+  } else {
+    state.streak = 0;
+  }
+  state.score++;
+  const isNewRecord = state.best > prevBest && state.best >= 3;
+  renderStats(); renderDial(); saveStats();
+  celebrate();
+  bump("statScore");
+  if (state.mistakes === 0) bump("statStreak");
+  if (isNewRecord) bump("statBest");
+  showToast(isNewRecord ? "✨ Nowy rekord! " + state.key.name : "Brawo! " + state.key.name + " ✓", "good");
+  setTimeout(startRound, 950);
+}
+
+/* ---------------- mode: GAMA ---------------- */
+function renderGama() {
+  const k = state.key;
+  const tiles = k.sig === "flat" ? FLAT_TILES : SHARP_TILES;
+  card.innerHTML = `
+    <div class="eyebrow"><span>zbuduj gamę w górę</span><span class="keychip">${k.label}</span></div>
+    <div class="keyrow"><div class="keyname">${k.name}</div>${k.enh ? `<div class="altname">brzmi jak ${k.enh}</div>` : ""}</div>
+    <div class="toast hidden"></div>
+    <div class="slots">${k.scale.map(()=>`<div class="slot"></div>`).join("")}</div>
+    <div class="rowbtns"><button class="btnline" id="undo">↺ cofnij</button></div>
+    <div class="tilegrid">${tiles.map(n=>`<button class="tile" data-n="${n}">${n}</button>`).join("")}</div>
+  `;
+  card.querySelectorAll(".tile").forEach(btn=>{
+    btn.addEventListener("click", ()=>onGamaTap(btn));
+  });
+  card.querySelector("#undo").addEventListener("click", undoGama);
+}
+function undoGama() {
+  if (state.step === 0) return;
+  state.step--;
+  const slots = card.querySelectorAll(".slot");
+  slots[state.step].classList.remove("filled");
+  slots[state.step].textContent = "";
+}
+function onGamaTap(btn) {
+  const k = state.key;
+  const expected = k.scale[state.step];
+  const val = btn.dataset.n;
+  if (val === expected) {
+    const slots = card.querySelectorAll(".slot");
+    slots[state.step].textContent = val;
+    slots[state.step].classList.add("filled");
+    state.step++;
+    if (state.step === k.scale.length) {
+      completeRound();
+    }
+  } else {
+    state.mistakes++;
+    btn.classList.add("bad","shake");
+    showToast("Spróbuj jeszcze raz", "bad");
+    setTimeout(()=>btn.classList.remove("bad","shake"), 320);
+  }
+}
+
+/* ---------------- mode: SĄSIEDZI ---------------- */
+function neighbor(k, dir) {
+  const id = (k.id + dir + 12) % 12;
+  return KEYS.find(x=>x.id===id);
+}
+function renderSasiedzi() {
+  const k = state.key;
+  state.sub = "S"; state.subDone = {S:false, D:false};
+  card.innerHTML = `
+    <div class="eyebrow"><span>lewy sąsiad = S · prawy = D</span><span class="keychip">${k.label}</span></div>
+    <div class="keyrow"><div class="keyname">${k.name}</div>${k.enh ? `<div class="altname">brzmi jak ${k.enh}</div>` : ""}</div>
+    <div class="toast hidden"></div>
+    <div class="subq" id="subS">
+      <div class="label"><span class="dot"></span>subdominanta (lewy sąsiad)</div>
+      <div class="options" id="optS"></div>
+    </div>
+    <div class="subq" id="subD" style="opacity:.35;pointer-events:none">
+      <div class="label"><span class="dot"></span>dominanta (prawy sąsiad)</div>
+      <div class="options" id="optD"></div>
+    </div>
+  `;
+  buildOptions("optS", neighbor(k,-1), "S");
+  buildOptions("optD", neighbor(k, 1), "D");
+}
+function buildOptions(containerId, correctKey, which) {
+  const k = state.key;
+  let distractors = KEYS.filter(x=>x.id!==correctKey.id && x.id!==k.id);
+  distractors = shuffle(distractors).slice(0,3);
+  const opts = shuffle([correctKey, ...distractors]);
+  const el = document.getElementById(containerId);
+  el.innerHTML = opts.map(o=>`<button class="opt" data-id="${o.id}">${o.name}</button>`).join("");
+  el.querySelectorAll(".opt").forEach(btn=>{
+    btn.addEventListener("click", ()=>onSasiedziTap(btn, correctKey.id, which));
+  });
+}
+function onSasiedziTap(btn, correctId, which) {
+  const chosen = parseInt(btn.dataset.id, 10);
+  const group = btn.parentElement;
+  if (chosen === correctId) {
+    btn.classList.add("good");
+    group.querySelectorAll(".opt").forEach(o=>{ o.disabled = true; if(o!==btn) o.classList.add("dim"); });
+    state.subDone[which] = true;
+    if (which === "S") {
+      document.getElementById("subD").style.opacity = 1;
+      document.getElementById("subD").style.pointerEvents = "auto";
+    }
+    if (state.subDone.S && state.subDone.D) completeRound();
+  } else {
+    state.mistakes++;
+    btn.classList.add("bad","shake");
+    btn.disabled = true;
+    showToast("Nie ten sąsiad — spróbuj kolejny", "bad");
+    setTimeout(()=>btn.classList.remove("shake"), 320);
+  }
+}
+
+/* ---------------- mode: PASAŻ ---------------- */
+function renderPasaz() {
+  const k = state.key;
+  const seq = ["T","S","D","T"];
+  const chords = {T:k.T, S:k.S, D:k.D};
+  const tileOrder = shuffle(["T","S","D"]);
+  state._pasazSeq = seq; state._pasazStep = 0;
+  card.innerHTML = `
+    <div class="eyebrow"><span>pasaż: T → S → D → T</span><span class="keychip">${k.label}</span></div>
+    <div class="keyrow"><div class="keyname">${k.name}</div>${k.enh ? `<div class="altname">brzmi jak ${k.enh}</div>` : ""}</div>
+    <div class="toast hidden"></div>
+    <div class="cadence">${seq.map(()=>`<div class="cslot"></div>`).join("")}</div>
+    <div class="chordtiles">${tileOrder.map(t=>`<button class="chordtile" data-role="${t}">${chords[t]}</button>`).join("")}</div>
+  `;
+  card.querySelectorAll(".chordtile").forEach(btn=>{
+    btn.addEventListener("click", ()=>onPasazTap(btn));
+  });
+}
+function onPasazTap(btn) {
+  const role = btn.dataset.role;
+  const expected = state._pasazSeq[state._pasazStep];
+  if (role === expected) {
+    const slots = card.querySelectorAll(".cslot");
+    slots[state._pasazStep].textContent = btn.textContent;
+    slots[state._pasazStep].classList.add("filled");
+    state._pasazStep++;
+    if (state._pasazStep === state._pasazSeq.length) {
+      completeRound();
+    }
+  } else {
+    state.mistakes++;
+    btn.classList.add("bad","shake");
+    showToast("Zła kolejność — to nie ten akord", "bad");
+    setTimeout(()=>btn.classList.remove("bad","shake"), 320);
+  }
+}
+
+/* ---------------- round / mode control ---------------- */
+function startRound() {
+  state.key = pickKey();
+  state.step = 0;
+  state.mistakes = 0;
+  if (state.mode === "gama") renderGama();
+  else if (state.mode === "sasiedzi") renderSasiedzi();
+  else renderPasaz();
+}
+document.getElementById("skipBtn").addEventListener("click", startRound);
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    state.mode = tab.dataset.mode;
+    startRound();
+  });
+});
+
+loadStats().then(startRound);
+</script>
+</body>
+</html>
